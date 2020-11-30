@@ -1,0 +1,77 @@
+---
+title: "Env-Chem_Gen-Code"
+author: "J.Behrens"
+date: "11/30/2020"
+output: html_document
+---
+
+# Set-Up R Environment
+```{r setup}
+## Clear environment
+rm(list = ls())
+
+## Libraries
+library(dataRetrieval)
+library(tidyverse)
+library(openxlsx)
+library(leaflet)                                           
+library(reshape2)
+library(knitr)
+
+#Set working directory
+opts_knit$set(root.dir = "C:/Users/jbehr/OneDrive - Duke University/Documents/5. R/General_Env_Chem")
+```
+
+# Download Data
+
+```{r}
+
+data<-read.csv("data.csv") #large file
+
+
+```
+
+# Plot: By Decade
+
+```{r}
+
+#OLD CODE
+
+Year_Plot<- Both_Water %>% 
+  ggplot(aes(x=as.character(Decade), fill=Site_Group)) +
+  geom_bar() +
+  theme_classic() + 
+  theme(axis.text.x = element_text(angle=45, hjust = 1)) + 
+  labs(title="Both Areas by Decade")
+print(Year_Plot)
+##ggsave("output/Years.png")
+
+Year_4_site_Plot<- Both_Water  %>% 
+  filter(str_detect(MonitoringLocationIdentifier, 
+                    "USGS-02085500|USGS-02086500|USGS-02086849|J1269000")) %>% 
+  ggplot(aes(x=as.character(Decade), fill=MonitoringLocationName)) +
+  geom_bar() +
+  theme_classic() + 
+  theme(axis.text.x = element_text(angle=45, hjust = 1)) + 
+  labs(title="Both Areas by Decade")
+print(Year_4_site_Plot)
+##ggsave("output/Years_4_sites.png")
+
+decade_EC_Plot<-Ellerbe_Creek_Water %>% 
+  ggplot(aes(x=MonitoringLocationIdentifier, fill = as.character(Decade))) +
+  geom_bar() +
+  theme_classic() + 
+  theme(axis.text.x = element_text(angle=45, hjust = 1)) + 
+  labs(title="Ellerbe Creek by Decade")
+print(decade_EC_Plot)
+##ggsave("output/Decades_EC.png")
+
+decade_FR_Plot<-Flat_River_Water %>% 
+  ggplot(aes(x=MonitoringLocationIdentifier, fill = as.character(Decade))) +
+  geom_bar() +
+  theme_classic() + 
+  theme(axis.text.x = element_text(angle=45, hjust = 1)) + 
+  labs(title="Flat River by Decade")
+print(decade_FR_Plot)
+##ggsave("output/Decades_FR.png")
+```
