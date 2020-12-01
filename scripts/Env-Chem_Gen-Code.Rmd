@@ -24,12 +24,80 @@ opts_knit$set(root.dir = "C:/Users/jbehr/OneDrive - Duke University/Documents/5.
 
 # Download Data
 
+For now, just looking at organic contaminants on the USGS PCode List (NWIS).
+
+```{r}
+USGS_Param<-read.xlsx("raw_data/RAW_USGS-Param-Codes.xlsx") %>% 
+  mutate(casrn = str_replace_all(casrn, "-",""))
+
+CompTox<-read.xlsx("raw_data/RAW_CompToxChemicalsDashboard-All-USGS-PCs.xlsx") %>% 
+  mutate(CASRN = str_replace_all(CASRN, "-",""))
+
+CompTox_Lists<-read.csv("raw_data/CompToxChemicalsDashboard-Batch-Search_2020-11-30.csv") %>% 
+  gather(LISTS, Yes_or_No, 6:293) %>% 
+  filter(Yes_or_No == "Y") %>% 
+  select(!Yes_or_No) %>% #These three lines consolidates the lists, and removes categories the cmpd is not in
+  arrange(-desc(PREFERRED_NAME))  
+
+TSCA_List<-read.csv("raw_data/TSCAINV_062020.csv")
+
+```
+
+# Merge Datasets
 ```{r}
 
-data<-read.csv("data.csv") #large file
+CompTox_List_Names<-read.xlsx("raw_data/CompTox_Lists.xlsx")
+CompTox_Lists<-left_join(CompTox_Lists, CompTox_List_Names)
+
+CompTox_Lists %>% 
+  group_by(LISTS) %>%   
+  count() %>%
+  full_join(CompTox_List_Names) %>% 
+  arrange(desc(n)) %>% 
+  view()
+
+```
+
+#Some simple stats
+```{r}
+
+Categories<-CompTox_Lists %>% 
+  distinct_()
+  filter(Gen_Type == "Category") %>%
+  group_by(PREFERRED_NAME, Specific_Type) %>% 
+  distinct(.keep_all = TRUE) 
+
+
+
+
+
+
+
+
+full_1<-USGS_Param %>%   
+  group_by(parameter_group_nm) %>% 
+  count() %>% 
+  arrange(desc(n)) %>% 
+  view()
+  filter(!str_detect(parameter_group_nm, 
+                    "inorganic")) 
+
+
+
+full<-Categories %>% 
+  group_by(Specific_Type) %>% 
+  count() %>% 
+  arrange(desc(n)) %>% 
+  view()
+
+USGS<-USGS_Param %>% 
+  distinct(casrn, .keep_all = )
+
 
 
 ```
+
+
 
 # Plot: By Decade
 
