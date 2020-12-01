@@ -3,5 +3,5 @@
 .RData
 .Ruserdata
 *.nb.html
-/data_raw
+/raw_data
 /output
