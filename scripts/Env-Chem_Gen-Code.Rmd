@@ -66,16 +66,28 @@ Lists_CompTox %>%
 # Count of compounds, by category
 Categories<-Lists_CompTox %>%
   filter(Gen_Type == "Category") %>%
-  distinct(PREFERRED_NAME, .keep_all = TRUE)
+  distinct(PREFERRED_NAME, Specific_Type, .keep_all = TRUE)
 
 Categories %>% 
   group_by(Specific_Type) %>% 
   count() %>% 
   arrange(desc(n))
 
-
 USGS_Param %>% 
   group_by(parameter_group_nm) %>% 
+  count() %>% 
+  arrange(desc(n))
+
+# Categories for Elements
+Lists_CompTox_raw %>%
+  filter(ELEMENTS == "Y") %>% 
+  gather(LISTS, Yes_or_No, 6:293) %>% 
+  filter(Yes_or_No == "Y") %>% 
+  select(!Yes_or_No) %>% #These three lines consolidates the lists, and removes categories the cmpd is not in
+  left_join(List_Names_CompTox) %>% 
+  filter(Gen_Type == "Category") %>%
+  distinct(PREFERRED_NAME, Specific_Type, .keep_all = TRUE) %>% 
+  group_by(Specific_Type) %>% 
   count() %>% 
   arrange(desc(n))
 
@@ -83,53 +95,18 @@ USGS_Param %>%
 
 #Some simple stats
 ```{r}
-# Find uncategorized chemicals
 
+#Categories for each chemical
+Chemical_By_Cat<- Lists_CompTox %>%
+  select(PREFERRED_NAME, Specific_Type) %>% 
+  unique() %>% 
+  pivot_wider(names_from = Specific_Type, values_from = Specific_Type) %>% 
+  unite(Other:Fertilizer, col="Categories_Merged", sep=";") %>% 
+  mutate(New = str_remove_all(Categories_Merged, "NA;|NA"))
 
-
-
-
-
-
-
-
-
-
-
-
-
+# All the PFAS Chemicals
 full_PFAS<-Categories %>% 
-  filter(Specific_Type == "PFAS") %>% 
-  view()
-
-
-Full_new<-left_join(Lists_CompTox, 
-                select(Chem_CompTox_raw, c(DTXSID,CASRN)), 
-                by="DTXSID")
-  
-  
-All<-full_join(USGS_Param, Lists_CompTox)
-
-
-
-
-
-full_1<-USGS_Param %>%   
-  group_by(parameter_group_nm) %>% 
-  count() %>% 
-  arrange(desc(n)) %>% 
-  view()
-  filter(!str_detect(parameter_group_nm, 
-                    "inorganic")) 
-
-
-
-
-
-USGS<-USGS_Param %>% 
-  distinct(casrn, .keep_all = )
-
-
+  filter(Specific_Type == "PFAS")
 
 ```
 
