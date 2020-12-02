@@ -27,48 +27,88 @@ opts_knit$set(root.dir = "C:/Users/jbehr/OneDrive - Duke University/Documents/5.
 For now, just looking at organic contaminants on the USGS PCode List (NWIS).
 
 ```{r}
-USGS_Param<-read.xlsx("raw_data/RAW_USGS-Param-Codes.xlsx") %>% 
-  mutate(casrn = str_replace_all(casrn, "-",""))
+# Import Raw Data
+USGS_Param<-read.csv("raw_data/RAW_USGS-Param-Codes.csv") %>% 
+  mutate(casrn = str_replace_all(casrn, "-","")) 
 
-CompTox<-read.xlsx("raw_data/RAW_CompToxChemicalsDashboard-All-USGS-PCs.xlsx") %>% 
+Lists_CompTox_raw<-read.csv("raw_data/CompToxChemicalsDashboard-Batch-Search_2020-11-30.csv")
+
+Chem_CompTox_raw<-read.csv("raw_data/RAW_CompToxChemicalsDashboard-All-USGS-PCs.csv") %>% 
   mutate(CASRN = str_replace_all(CASRN, "-",""))
 
-CompTox_Lists<-read.csv("raw_data/CompToxChemicalsDashboard-Batch-Search_2020-11-30.csv") %>% 
+TSCA_List<-read.csv("raw_data/TSCAINV_062020.csv") %>% 
+  filter(ACTIVITY == "ACTIVE") %>% 
+  distinct(casregno, .keep_all = TRUE)
+List_Names_CompTox<-read.csv("raw_data/CompTox_Lists.csv")
+
+# Make a few simiple datsets
+All_CompTox_Data<-left_join(Lists_CompTox_raw, Chem_CompTox_raw, by="DTXSID") %>% 
+  filter(DTXSID !="-")
+
+Lists_CompTox<- Lists_CompTox_raw %>% 
   gather(LISTS, Yes_or_No, 6:293) %>% 
   filter(Yes_or_No == "Y") %>% 
   select(!Yes_or_No) %>% #These three lines consolidates the lists, and removes categories the cmpd is not in
-  arrange(-desc(PREFERRED_NAME))  
-
-TSCA_List<-read.csv("raw_data/TSCAINV_062020.csv")
+  arrange(-desc(PREFERRED_NAME)) %>% 
+  left_join(List_Names_CompTox)
 
 ```
 
 # Merge Datasets
 ```{r}
-
-CompTox_List_Names<-read.xlsx("raw_data/CompTox_Lists.xlsx")
-CompTox_Lists<-left_join(CompTox_Lists, CompTox_List_Names)
-
-CompTox_Lists %>% 
+# Count of compounds, by list
+Lists_CompTox %>% 
   group_by(LISTS) %>%   
   count() %>%
-  full_join(CompTox_List_Names) %>% 
-  arrange(desc(n)) %>% 
-  view()
+  full_join(List_Names_CompTox) %>% 
+  arrange(desc(n))
+
+# Count of compounds, by category
+Categories<-Lists_CompTox %>%
+  filter(Gen_Type == "Category") %>%
+  distinct(PREFERRED_NAME, .keep_all = TRUE)
+
+Categories %>% 
+  group_by(Specific_Type) %>% 
+  count() %>% 
+  arrange(desc(n))
+
+
+USGS_Param %>% 
+  group_by(parameter_group_nm) %>% 
+  count() %>% 
+  arrange(desc(n))
 
 ```
 
 #Some simple stats
 ```{r}
-
-Categories<-CompTox_Lists %>% 
-  distinct_()
-  filter(Gen_Type == "Category") %>%
-  group_by(PREFERRED_NAME, Specific_Type) %>% 
-  distinct(.keep_all = TRUE) 
+# Find uncategorized chemicals
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+full_PFAS<-Categories %>% 
+  filter(Specific_Type == "PFAS") %>% 
+  view()
+
+
+Full_new<-left_join(Lists_CompTox, 
+                select(Chem_CompTox_raw, c(DTXSID,CASRN)), 
+                by="DTXSID")
+  
+  
+All<-full_join(USGS_Param, Lists_CompTox)
 
 
 
@@ -84,11 +124,7 @@ full_1<-USGS_Param %>%
 
 
 
-full<-Categories %>% 
-  group_by(Specific_Type) %>% 
-  count() %>% 
-  arrange(desc(n)) %>% 
-  view()
+
 
 USGS<-USGS_Param %>% 
   distinct(casrn, .keep_all = )
