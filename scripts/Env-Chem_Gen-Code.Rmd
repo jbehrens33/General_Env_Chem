@@ -98,16 +98,146 @@ Lists_CompTox_raw %>%
 
 #Categories for each chemical
 Chemical_By_Cat<- Lists_CompTox %>%
-  select(PREFERRED_NAME, Specific_Type) %>% 
+  select(PREFERRED_NAME, DTXSID, Specific_Type) %>% 
   unique() %>% 
   pivot_wider(names_from = Specific_Type, values_from = Specific_Type) %>% 
   unite(Other:Fertilizer, col="Categories_Merged", sep=";") %>% 
-  mutate(New = str_remove_all(Categories_Merged, "NA;|NA"))
+  mutate(Categories_Merged = str_remove_all(Categories_Merged, "NA;|NA"))
 
 # All the PFAS Chemicals
 full_PFAS<-Categories %>% 
   filter(Specific_Type == "PFAS")
 
+```
+
+# Specifically looking at Muddy Creek Pharmacueticals
+```{r}
+# Import Raw Data
+## already imported Lists_Names_Comptox, USGS_Param, and TSCA_List in teh above code
+List_Names_CompTox<-read.csv("raw_data/CompTox_Lists.csv")
+
+MC_Lists_CompTox_raw<-read.csv("raw_data/MC_CompToxChemicalsDashboard-Batch-Search_2020-12-03_13-03-07.csv")
+
+MC_Chem_CompTox_raw<-read.csv("raw_data/MC_CompToxChemicalsDashboard-Batch-Search_2020-12-03_13-04-39.csv") %>% 
+  mutate(CASRN = str_replace_all(CASRN, "-",""))
+
+# Make a few simiple datsets
+MC_All_CompTox_Data<-left_join(MC_Lists_CompTox_raw, MC_Chem_CompTox_raw, by="DTXSID") %>% 
+  filter(DTXSID !="-")
+
+MC_Lists_CompTox<- MC_Lists_CompTox_raw %>% 
+  gather(LISTS, Yes_or_No, 6:292) %>% 
+  filter(Yes_or_No == "Y") %>% 
+  select(!Yes_or_No) %>% #These three lines consolidates the lists, and removes categories the cmpd is not in
+  arrange(-desc(PREFERRED_NAME)) %>% 
+  left_join(List_Names_CompTox)
+
+
+# Simple Tables
+
+# Count of compounds, by list
+MC_Lists_CompTox %>% 
+  group_by(LISTS) %>%   
+  count() %>%
+  full_join(List_Names_CompTox) %>% 
+  arrange(desc(n))
+
+# Categories
+MC_Lists_CompTox_raw %>%
+  gather(LISTS, Yes_or_No, 6:292) %>% 
+  filter(Yes_or_No == "Y") %>% 
+  select(!Yes_or_No) %>% #These three lines consolidates the lists, and removes categories the cmpd is not in
+  left_join(List_Names_CompTox) %>% 
+  filter(Gen_Type == "Category") %>%
+  distinct(PREFERRED_NAME, Specific_Type, .keep_all = TRUE) %>% 
+  group_by(Specific_Type) %>% 
+  count() %>% 
+  arrange(desc(n))
+
+
+#Categories for each chemical
+MC_Chemical_By_Cat<- MC_Lists_CompTox %>%
+  select(PREFERRED_NAME, DTXSID, Specific_Type) %>% 
+  unique() %>% 
+  pivot_wider(names_from = Specific_Type, values_from = Specific_Type) %>% 
+  unite(Other:Rubber, col="Categories_Merged", sep=";") %>% #Make sure column names are all
+  mutate(Categories_Merged = str_remove_all(Categories_Merged, "NA;|NA"))
+
+
+```
+
+# Chemistry figures of Muddy Creek Pharma
+
+```{r}
+MC_Chem_CompTox_raw$OCTANOL_AIR_PARTITION_COEFF_LOGKOA_OPERA_PRED<-as.numeric(as.character(
+  MC_Chem_CompTox_raw$OCTANOL_AIR_PARTITION_COEFF_LOGKOA_OPERA_PRED))
+MC_Chem_CompTox_raw$OCTANOL_WATER_PARTITION_LOGP_OPERA_PRED <-as.numeric(as.character(
+  MC_Chem_CompTox_raw$OCTANOL_WATER_PARTITION_LOGP_OPERA_PRED))
+MC_Chem_CompTox_raw$BIOCONCENTRATION_FACTOR_TEST_PRED <-as.numeric(as.character(
+  MC_Chem_CompTox_raw$BIOCONCENTRATION_FACTOR_TEST_PRED))
+MC_Chem_CompTox_raw$BIOCONCENTRATION_FACTOR_OPERA_PRED <-as.numeric(as.character(
+  MC_Chem_CompTox_raw$BIOCONCENTRATION_FACTOR_OPERA_PRED))
+
+MC_KOA_vs_KOW<-MC_Chem_CompTox_raw  %>% 
+  filter(DTXSID !="-") %>% 
+  ggplot(aes(x=OCTANOL_WATER_PARTITION_LOGP_OPERA_PRED,
+             y=OCTANOL_AIR_PARTITION_COEFF_LOGKOA_OPERA_PRED,
+             color=OCTANOL_WATER_PARTITION_LOGP_OPERA_PRED)) +
+  geom_point() +
+  theme_classic() +  
+  labs(title="LogKOA vs. LogKOW")+
+  ylab("LogKoa")+ xlab("LogKow") +
+  scale_color_gradient2(low="red", mid = "grey", high= "blue", midpoint = 5) # Canada & EU LogKOW for bioaccum
+print(MC_KOA_vs_KOW)
+
+MC_BCF<-MC_Chem_CompTox_raw %>% 
+  filter(DTXSID !="-") %>% 
+  ggplot(aes(x=log10(BIOCONCENTRATION_FACTOR_TEST_PRED),
+             y=log10(BIOCONCENTRATION_FACTOR_OPERA_PRED),
+             color = log10(BIOCONCENTRATION_FACTOR_OPERA_PRED))) +
+  geom_point() +
+  scale_color_gradient2(low="red", mid = "grey", high= "blue", midpoint = 3.699) + #log10(5000) ~ 3.699; US limit for bioaccum
+  theme_classic() +  
+  labs(title="Bioconcentration Factor (Predicted by two models)")+
+  ylab("Log(BCF OPERA Model)")+ xlab("Log(BCF Predicted)")
+print(MC_BCF)  
+```
+
+# Same but for all USGS Parameters
+
+```{r}
+Chem_CompTox_raw$OCTANOL_AIR_PARTITION_COEFF_LOGKOA_OPERA_PRED<-as.numeric(as.character(
+  Chem_CompTox_raw$OCTANOL_AIR_PARTITION_COEFF_LOGKOA_OPERA_PRED))
+Chem_CompTox_raw$OCTANOL_WATER_PARTITION_LOGP_OPERA_PRED <-as.numeric(as.character(
+  Chem_CompTox_raw$OCTANOL_WATER_PARTITION_LOGP_OPERA_PRED))
+Chem_CompTox_raw$BIOCONCENTRATION_FACTOR_TEST_PRED <-as.numeric(as.character(
+  Chem_CompTox_raw$BIOCONCENTRATION_FACTOR_TEST_PRED))
+Chem_CompTox_raw$BIOCONCENTRATION_FACTOR_OPERA_PRED <-as.numeric(as.character(
+  Chem_CompTox_raw$BIOCONCENTRATION_FACTOR_OPERA_PRED))
+
+KOA_vs_KOW<-Chem_CompTox_raw  %>% 
+  filter(DTXSID !="-") %>% 
+  ggplot(aes(x=OCTANOL_WATER_PARTITION_LOGP_OPERA_PRED,
+             y=OCTANOL_AIR_PARTITION_COEFF_LOGKOA_OPERA_PRED,
+             color=OCTANOL_WATER_PARTITION_LOGP_OPERA_PRED)) +
+  geom_point() +
+  theme_classic() +  
+  labs(title="LogKOA vs. LogKOW")+
+  ylab("LogKoa")+ xlab("LogKow")+
+  scale_color_gradient2(low="red", mid = "grey", high= "blue", midpoint = 5) # Canada & EU LogKOW for bioaccum
+print(KOA_vs_KOW)
+
+BCF<-Chem_CompTox_raw %>% 
+  filter(DTXSID !="-") %>% 
+  ggplot(aes(x=log10(BIOCONCENTRATION_FACTOR_TEST_PRED),
+             y=log10(BIOCONCENTRATION_FACTOR_OPERA_PRED),
+             color = log10(BIOCONCENTRATION_FACTOR_OPERA_PRED))) +
+  geom_point() +
+  scale_color_gradient2(low="red", mid = "grey", high= "blue", midpoint = 3.699) + #log10(5000) ~ 3.699; US limit for bioaccum
+  theme_classic() +  
+  labs(title="Bioconcentration Factor (Predicted by two models)")+
+  ylab("Log(BCF OPERA Model)")+ xlab("Log(BCF Predicted)")
+print(BCF)  
 ```
 
 
