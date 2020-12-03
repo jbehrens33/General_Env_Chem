@@ -1,0 +1,26 @@
+---
+title: "Richmond_Pharma"
+author: "J.Behrens"
+date: "1/5/2021"
+output: html_document
+---
+
+
+# Set-Up R Environment
+```{r setup}
+## Clear environment
+rm(list = ls())
+
+## Libraries
+library(dataRetrieval)
+library(tidyverse)
+library(openxlsx)
+library(leaflet)                                           
+library(reshape2)
+library(knitr)
+
+#Set working directory
+opts_knit$set(root.dir = "C:/Users/jbehr/OneDrive - Duke University/Documents/5. R/General_Env_Chem")
+```
+
+# Download Data
