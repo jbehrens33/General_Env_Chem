@@ -82,8 +82,8 @@ USGS_Param %>%
 # Categories for Elements
 Lists_CompTox_raw %>%
   filter(ELEMENTS == "Y") %>% 
-  gather(LISTS, Yes_or_No, 6:293) %>% 
-  filter(Yes_or_No == "Y") %>% 
+
+  filter(Yes_or_No == "Y") %>%   gather(LISTS, Yes_or_No, 6:293) %>% 
   select(!Yes_or_No) %>% #These three lines consolidates the lists, and removes categories the cmpd is not in
   left_join(List_Names_CompTox) %>% 
   filter(Gen_Type == "Category") %>%
