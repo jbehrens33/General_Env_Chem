@@ -18,9 +18,93 @@ library(openxlsx)
 library(leaflet)                                           
 library(reshape2)
 library(knitr)
+library(ggfortify)
 
 #Set working directory
 opts_knit$set(root.dir = "C:/Users/jbehr/OneDrive - Duke University/Documents/5. R/General_Env_Chem")
 ```
 
 # Download Data
+```{r}
+
+Pharm_Data_Raw<-read.csv("raw_data/Richmond et al 2018_pharmaceutical concentrations.csv")
+
+Pharm_Info_Raw<-read.csv("raw_data/CompToxChemicalsDashboard-Batch-Search_2021-01-05_Richmond-Pharma.csv") %>% 
+  rename(Pharma = INPUT)
+
+
+```
+
+# Prep Data
+
+```{r}
+
+Pharm_Data<-Pharm_Data_Raw %>% 
+  gather(Pharma, Measured_Concentration, 8:105) %>% 
+  mutate(Measured_Concentration = str_replace_all(Measured_Concentration, "<LOQ","0"))
+
+All_Data<-left_join(Pharm_Data, Pharm_Info_Raw, by = "Pharma")%>% 
+  na_if("-") 
+
+#All_Data %>% 
+ # group_by(Site) %>% 
+  #count() %>% 
+  #arrange(desc(n)) %>% 
+  #view()
+
+PCA_Data<- All_Data %>% 
+  select(!Sample..:Pharma) %>% 
+  select(!FOUND_BY:MOLECULAR_FORMULA) %>% 
+  mutate_all(as.numeric)
+
+PCA_Brushy<-All_Data %>% 
+  filter (Site == "Brushy") %>% 
+  select(!Sample..:Pharma) %>% 
+  select(!FOUND_BY:MOLECULAR_FORMULA) %>% 
+  mutate_all(as.numeric)
+```
+
+# Plot
+
+```{r}
+Plot<- All_Data %>% 
+  mutate(Measured_Concentration = as.numeric(Measured_Concentration)) %>% 
+ # filter(Measured_Concentration > 0) %>% 
+  ggplot(aes(x=Site, y = Measured_Concentration, color = Site)) +
+  geom_boxplot() +
+  theme_classic() + 
+  theme(axis.text.x = element_text(angle=45, hjust = 1)) + 
+  labs(title="Ellerbe Creek by Decade")
+print(Plot)
+##ggsave("output/Decades_EC.png")
+```
+
+
+#PCA
+Helpful resource: https://www.datacamp.com/community/tutorials/pca-analysis-r
+
+```{r}
+all.pca <- prcomp(na.omit(PCA_Data[,c(1, 20:31)]), center = TRUE, scale. = TRUE)
+
+summary(all.pca)
+
+Brushy.pca <- prcomp(na.omit(PCA_Brushy[,c(1, 20:31)]), center = TRUE, scale. = TRUE)
+
+summary(Brushy.pca)
+
+```
+
+# Graph PCAs
+Tutorial on graphing PCAs here: https://cran.r-project.org/web/packages/ggfortify/vignettes/plot_pca.html
+
+```{r}
+autoplot(all.pca, data = na.omit(PCA_Data[,c(1, 20:31)]), 
+         loadings = TRUE, loadings.colour = 'blue',
+         loadings.label = TRUE, loadings.label.size = 3)
+
+autoplot(Brushy.pca, data = na.omit(PCA_Brushy[,c(1, 20:31)]), 
+         loadings = TRUE, loadings.colour = 'blue',
+         loadings.label = TRUE, loadings.label.size = 3)
+
+```
+
